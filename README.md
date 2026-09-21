@@ -1,79 +1,185 @@
-# AI-Agent TrajectoryAnalyzer
+## 📦 Conda Environment Setup
 
-<p align="justify">
-A modular, GROMACS-centric molecular dynamics (MD) trajectory analysis framework with an optional AI-assisted interface for structured task specification. This project provides a web-based UI for common MD trajectory analyses, backed by deterministic GROMACS execution modules. An optional AI agent converts natural-language requests into structured JSON tasks without directly executing simulations.
-</p>
+```bash
 
-You can download and use this tool for free by clicking <a href="https://cadd.sean28299.dpdns.org/static/AI-agent_TrajectoryAnalyzer.zip">here</a>. 👉 [Live Demo](http://traj.sean28299.dpdns.org)
-
----
-
-## ✨ Key Features
-
-- Web-based MD trajectory analysis (Flask)
-- Modular GROMACS backend (`gmx_*.py`)
-- Expert-controlled atom selection (index groups + `gmx select`)
-- Optional AI-assisted task specification (JSON-based)
-- Fully deterministic and reproducible execution
-- Pre-packaged Conda environments (Linux & macOS)
-- No manual GROMACS compilation required
-
----
-
-## 📁 Repository Structure
-
-```
-TrajectoryAnalyzer/
-├── app-traj-analysis.py
-├── gmx_ai.py
-├── gmx_rms.py
-├── gmx_rmsf.py
-├── gmx_gyrate.py
-├── gmx_sasa.py
-├── gmx_cluster.py
-├── gmx_pca.py
-├── gmx_distance.py
-├── gmx_contact.py
-├── gmx_hbond.py
-├── templates/
-│   ├── traj_analysis_ui.html
-│   ├── ai_ui.html
-│   ├── pca_ui_compact.html
-│   ├── hbond_ui.html
-│   ├── distance_ui.html
-│   └── custom_selection_guide.html
-├── env/
-│   ├── LINUX_gromacs_env.tar.gz
-│   └── MAC_gromacs_env.tar.gz
-├── traj_package.zip
-└── README.md
+# 1. Extract GridMap_denv.tar.gz
+mkdir -p gromacs_env
+tar -xzvf MAC_gromacs_env.tar.gz -C gromacs_env
+cd gromacs_env
+# 2. Activate Environment
+source bin/activate
+conda-unpack
 ```
 
-## 🖥 System Requirements
-Linux or macOS
+## 🚀 Run the Server
 
-## 📦 Installation & Activate the Environment
-### Linux
-```
-tar -xzf LINUX_gromacs_env.tar.gz
-source LINUX_gromacs_env/bin/activate
-```
-### MacOS
-```
-tar -xzf MAC_gromacs_env.tar.gz
-source MAC_gromacs_env/bin/activate
-```
-
-## 🚀 Launching the Web Interface
-```
+```bash
 unzip traj_package.zip
-cd traj_package/
+cd traj_package
 python app-traj-analysis.py
-The interface will be available at: http://localhost:8082
 ```
 
+Open http://127.0.0.1:8082
 
+## AI Usage: From Natural-Language Instructions to Analysis Tasks
 
+The AI feature converts natural-language instructions into analysis-parameter JSON.
+The current version supports RMSD, RMSF, SASA, Rg (radius of gyration), and Cluster.
+Submit one analysis task at a time.
 
+### 1. Configure Ollama and the Model
 
+First install and start Ollama on the local computer or server running the
+TrajectoryAnalyzer backend, then install the model you want to use. This guide uses
+**`qwen3:4b-instruct`** as the default model. After opening the AI window, select this
+model from **Select Model**.
 
+The model list is obtained from the models actually installed in Ollama. The interface
+does not install models automatically and does not guarantee that the default model
+used in this guide will be selected automatically.
+
+The default **Model API URL** is:
+
+```text
+http://127.0.0.1:11434/api/generate
+```
+
+`127.0.0.1` refers to the machine from which the request is made. The current model
+list is read by the browser, while the JSON-generation request is sent by the
+TrajectoryAnalyzer backend. Therefore, this default address is suitable when the
+browser, TrajectoryAnalyzer, and Ollama are running on the same machine.
+
+If you access TrajectoryAnalyzer through a browser on another computer, or if Ollama
+is deployed on a different server, enter an Ollama address that is accessible to both
+the browser and the TrajectoryAnalyzer backend.
+
+### 2. Enter an Instruction and Click Send
+
+First upload the corresponding PDB and trajectory files, then open the AI window.
+In the **AI Chat** input box, describe the analysis target, analysis type, atom
+selection, time range, and sampling interval, then click **Send**.
+
+**Send** only asks the model to generate JSON. It does not start trajectory analysis.
+
+Example:
+
+> I want to examine the backbone structural drift of chain A in the WT system over the full 1000 ns simulation using RMSD, with a 2 ns sampling interval.
+
+More example instructions:
+
+1. Analyze the overall stability of chain A in the XX system during the final 300 ns. Use the backbone for fitting and RMSD calculation, sampling one frame every 1 ns.
+2. Examine residue fluctuations of chain A in the XX system using RMSF from 500 to 1000 ns, with a 2 ns sampling interval.
+3. Calculate the backbone RMSF of chain A in the XX system using only the final 200 ns, sampling every 1 ns.
+4. Check whether the overall protein compactness changes in the XX system using Rg analysis from 0 to 1000 ns, with a 5 ns sampling interval.
+5. Analyze the radius of gyration of chain A in the XX system during the final 500 ns, sampling every 2 ns.
+6. Examine the solvent exposure of the ligand named "LIGAND_NAME" in the XX system using SASA from 0 to 500 ns, with a 1 ns sampling interval.
+
+Replace `XX` with a system name that corresponds to the uploaded files, and replace
+`LIGAND_NAME` with the actual residue name in the structure file, for example `LIG`.
+
+If you use expressions such as "the final 300 ns", also specify the total trajectory
+length, for example: "The total trajectory length is 1000 ns; analyze the final
+300 ns." This allows the model to generate an explicit time range such as
+`700:1000:1`.
+
+If multiple similar files are available, specify the PDB and trajectory filenames
+directly in the instruction.
+
+### 3. Purpose of Prompt and Generated JSON
+
+- **Prompt**: The rule template used to convert natural-language instructions into
+  analysis parameters. When the AI window is opened, the program automatically fills
+  in the supported analysis types, atom-selection rules, JSON format, and uploaded
+  file list. In most cases, the default Prompt can be used directly. If you customize
+  it, keep the JSON-output rules, file lists, and the `{{USER_INPUT}}` placeholder.
+  When **Send** is clicked, the placeholder is replaced by the instruction entered in
+  the AI Chat box. After uploading additional files, reopen the AI window to refresh
+  the file list. Reopening the window also resets the Prompt template.
+
+- **Generated JSON**: The actual analysis parameters generated by the model and read by
+  **Apply**. This field can be edited manually. You can also paste a JSON object that
+  you prepared yourself without calling the model again.
+
+For example, RMSD analysis of the chain A backbone in the WT system from 0 to 1000 ns
+with a 2 ns sampling interval can be written as:
+
+```json
+{
+  "task": "rmsd",
+  "pdb": "WT_CYH_md1.pdb",
+  "traj": "WT_CYH_md1.xtc",
+  "group1": {
+    "type": "Custom Group (Manual Input)",
+    "value": "chain A and name N CA C O"
+  },
+  "group2": {
+    "type": "Custom Group (Manual Input)",
+    "value": "chain A and name N CA C O"
+  },
+  "frame_range": "0:1000:2",
+  "time_unit": "ns"
+}
+```
+
+The filenames above are examples only. They must be replaced with real uploaded files
+that correspond to each other.
+
+| Field | Description |
+| --- | --- |
+| `task` | `rmsd`, `rmsf`, `sasa`, `RG` (the backend also supports `gyrate`), or `cluster`. |
+| `pdb` / `traj` | Names of the uploaded structure and trajectory files. |
+| `group1` / `group2` | Atom selections. The `value` field uses GROMACS selection expressions. For RMSD, the two groups represent the fitting group and RMSD calculation group. RMSF and Rg use only `group1`, while `group2.value` should remain empty. SASA uses a protein group and a ligand group. |
+| `frame_range` | `start_time:end_time:step`, for example `0:1000:2`. Integer values are currently recommended. |
+| `time_unit` | Time unit, either `ns` or `ps`. |
+
+### 4. Check the JSON and Click Apply
+
+**A valid JSON object must be generated or entered before the analysis can be submitted with Apply.**
+
+Before clicking **Apply**, check the following:
+
+- The content is a complete JSON object using standard double quotes and contains no
+  Markdown code fences, comments, or explanatory text.
+- The analysis type, filenames, atom selections, time range, and time unit match the
+  intended task.
+- The PDB and trajectory files correspond to each other, and the chain identifiers and
+  residue names used in the selection expressions actually exist in the structure.
+
+If the JSON is empty or syntactically invalid, **Apply** will report an error and stop
+submission. Syntactically valid JSON does not guarantee that the parameters or
+scientific meaning are correct, so manual verification is still required.
+
+If the generated JSON is incorrect, modify the natural-language instruction and click
+**Send** again, or directly edit **Generated JSON** and then click **Apply**.
+
+Task progress and download links are displayed under **Tasks**.
+
+Known limitations of the current version:
+
+- For RMSD and Cluster, custom fitting and analysis groups cannot yet be used reliably
+  as separate selections. Keep both groups identical.
+- For RMSF, the selected time unit is not yet passed correctly to GROMACS. When using
+  the ns examples above, verify the actual execution log rather than relying only on
+  the JSON time window.
+- Generated reports retain the relevant configuration notes for these limitations.
+
+### 5. Download Analysis Results and the Basic Report
+
+Leave **Generate an English PDF report after analysis** selected if you want an
+automatic basic English report after the analysis finishes.
+
+The report includes analysis settings, data plots, statistical tables, data sources,
+and necessary notes.
+
+**Report generation does not call the model and does not include AI-generated
+interpretation of the results.**
+
+Click **Download PDF** to download the report alone.
+
+Click **Download ZIP** to download the original analysis results, PDF report, PNG
+figures, and `evidence.json` statistics.
+
+You can then provide the PDF or PNG figures to an AI tool that supports file input for
+further interpretation.
+
+See the next section for report dependencies and additional details.
